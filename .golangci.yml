@@ -1,0 +1,32 @@
+linters-settings:
+  errcheck:
+    # path to a file containing a list of functions to exclude from checking
+    # see https://github.com/kisielk/errcheck#excluding-functions for details
+    exclude: .errcheck-exclude.txt
+
+linters:
+  enable:
+    - revive
+    - misspell
+    - goimports
+    - wsl
+    - funlen
+    - staticcheck
+    - bodyclose
+    - errorlint
+    - goconst
+    - gofmt
+    - goheader
+    - importas
+    - nilerr
+    - gocritic
+    - nakedret
+    - whitespace
+    - unparam
+    - nolintlint
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
