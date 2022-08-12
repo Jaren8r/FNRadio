@@ -37,6 +37,7 @@ var inGameStations = []InGameStation{
 	{ID: "GEviYjIhzVVzJufW", Name: "Radio Yonder"},
 	{ID: "BXrDueZkosvNvxtx", Name: "Beat Box"},
 	{ID: "PcQCHxHkBsmjSneR", Name: "Power Play"},
+	{ID: "fTpbbVJbTHfGrFnH", Name: "Party Royale Screen"},
 }
 
 func getInGameStationByName(name string) *InGameStation {
