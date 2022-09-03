@@ -21,12 +21,13 @@ const (
 )
 
 const (
-	CreateCmd = "create"
-	PlayCmd   = "play"
-	DeleteCmd = "delete"
-	BindCmd   = "bind"
-	UnbindCmd = "unbind"
-	BindsCmd  = "binds"
+	CreateCmd  = "create"
+	PlayCmd    = "play"
+	DeleteCmd  = "delete"
+	BindCmd    = "bind"
+	BindAllCmd = "bindall"
+	UnbindCmd  = "unbind"
+	BindsCmd   = "binds"
 )
 
 var inGameStations = []InGameStation{
@@ -39,14 +40,14 @@ var inGameStations = []InGameStation{
 	{ID: "PcQCHxHkBsmjSneR", Name: "Power Play"},
 }
 
-func getInGameStationByName(name string) *InGameStation {
+func getInGameStationByName(name string) (InGameStation, bool) {
 	for _, station := range inGameStations {
 		if station.Name == name {
-			return &station
+			return station, true
 		}
 	}
 
-	return nil
+	return InGameStation{}, false
 }
 
 func (cli *CLI) completer(d prompt.Document) []prompt.Suggest {
@@ -61,6 +62,7 @@ func (cli *CLI) completer(d prompt.Document) []prompt.Suggest {
 		s = append(s, prompt.Suggest{Text: PlayCmd, Description: "Plays a song on a station"})
 		s = append(s, prompt.Suggest{Text: DeleteCmd, Description: "Deletes a station"})
 		s = append(s, prompt.Suggest{Text: BindCmd, Description: "Bind a station to an in-game station"})
+		s = append(s, prompt.Suggest{Text: BindAllCmd, Description: "Bind a station to all in-game stations"})
 		s = append(s, prompt.Suggest{Text: BindsCmd, Description: "Lists all bound stations"})
 		s = append(s, prompt.Suggest{Text: UnbindCmd, Description: "Unbind an in-game station"})
 	}
@@ -78,7 +80,7 @@ func (cli *CLI) completer(d prompt.Document) []prompt.Suggest {
 		s = append(s, prompt.Suggest{Text: StationTypeStream})
 	}
 
-	if len(split) == 2 && (split[0] == PlayCmd || split[0] == DeleteCmd || split[0] == BindCmd) {
+	if len(split) == 2 && (split[0] == PlayCmd || split[0] == DeleteCmd || split[0] == BindCmd || split[0] == BindAllCmd) {
 		index = 1
 
 		for _, station := range client.Users[client.APIClient.ID].Stations {
@@ -98,7 +100,7 @@ func (cli *CLI) completer(d prompt.Document) []prompt.Suggest {
 		index = 1
 
 		for _, station := range inGameStations {
-			if client.Users[client.APIClient.ID].Bindings[station.ID] != nil {
+			if _, ok := client.Users[client.APIClient.ID].Bindings[station.ID]; ok {
 				s = append(s, prompt.Suggest{Text: station.Name})
 			}
 		}
@@ -113,12 +115,12 @@ func (cli *CLI) createCmd(args []string) {
 		return
 	}
 
-	if client.Users[client.APIClient.ID].Stations[args[0]] != nil {
+	if _, ok := client.Users[client.APIClient.ID].Stations[args[0]]; ok {
 		fmt.Println("Station already exists")
 		return
 	}
 
-	station := &APIStation{
+	station := APIStation{
 		ID:   args[0],
 		Type: args[1],
 	}
@@ -155,8 +157,8 @@ func (cli *CLI) playCmd(args []string) {
 		return
 	}
 
-	station := client.Users[client.APIClient.ID].Stations[args[0]]
-	if station == nil {
+	station, ok := client.Users[client.APIClient.ID].Stations[args[0]]
+	if !ok {
 		fmt.Println("Station not found")
 		return
 	}
@@ -164,7 +166,7 @@ func (cli *CLI) playCmd(args []string) {
 	source := strings.Join(args[1:], " ")
 
 	if station.Type == StationTypeStatic {
-		err := client.APIClient.CreateStation(&APIStation{
+		err := client.APIClient.CreateStation(APIStation{
 			ID:     station.ID,
 			Type:   station.Type,
 			Source: source,
@@ -196,8 +198,8 @@ func (cli *CLI) deleteCmd(args []string) {
 		return
 	}
 
-	station := client.Users[client.APIClient.ID].Stations[args[0]]
-	if station == nil {
+	station, ok := client.Users[client.APIClient.ID].Stations[args[0]]
+	if !ok {
 		fmt.Println("Station not found")
 
 		return
@@ -221,25 +223,25 @@ func (cli *CLI) deleteCmd(args []string) {
 }
 
 func (cli *CLI) bindCmd(args []string) {
-	if len(args) <= 2 {
+	if len(args) < 2 {
 		fmt.Println("Usage: bind <station> <in-game station>")
 		return
 	}
 
-	station := client.Users[client.APIClient.ID].Stations[args[0]]
-	if station == nil {
+	station, ok := client.Users[client.APIClient.ID].Stations[args[0]]
+	if !ok {
 		fmt.Println("Invalid station")
 		return
 	}
 
-	inGameStation := getInGameStationByName(strings.Join(args[1:], " "))
+	inGameStation, ok := getInGameStationByName(strings.Join(args[1:], " "))
 
-	if inGameStation == nil {
+	if !ok {
 		fmt.Println("In-game station not found")
 		return
 	}
 
-	binding := &APIBinding{
+	binding := APIBinding{
 		ID:          inGameStation.ID,
 		StationUser: client.APIClient.ID,
 		StationID:   station.ID,
@@ -256,9 +258,40 @@ func (cli *CLI) bindCmd(args []string) {
 	fmt.Printf("Bound station %s to %s\n", station.ID, inGameStation.Name)
 }
 
+func (cli *CLI) bindAllCmd(args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: bindall <station>")
+		return
+	}
+
+	station, ok := client.Users[client.APIClient.ID].Stations[args[0]]
+	if !ok {
+		fmt.Println("Invalid station")
+		return
+	}
+
+	for _, inGameStation := range inGameStations {
+		binding := APIBinding{
+			ID:          inGameStation.ID,
+			StationUser: client.APIClient.ID,
+			StationID:   station.ID,
+		}
+
+		err := client.APIClient.CreateBinding(binding)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		client.Users[client.APIClient.ID].Bindings[binding.ID] = binding
+
+		fmt.Printf("Bound station %s to %s\n", station.ID, inGameStation.Name)
+	}
+}
+
 func (cli *CLI) bindsCmd(_ []string) {
 	for _, station := range inGameStations {
-		if client.Users[client.APIClient.ID].Bindings[station.ID] != nil {
+		if _, ok := client.Users[client.APIClient.ID].Bindings[station.ID]; ok {
 			fmt.Printf("%s -> %s\n", station.Name, client.Users[client.APIClient.ID].Bindings[station.ID].StationID)
 		} else {
 			fmt.Printf("%s -> %s\n", station.Name, "Default")
@@ -274,10 +307,10 @@ func (cli *CLI) unbindCmd(args []string) {
 
 	name := strings.Join(args, " ")
 
-	inGameStation := getInGameStationByName(name)
+	inGameStation, ok := getInGameStationByName(name)
 
-	if inGameStation != nil {
-		err := client.APIClient.DeleteBinding(&APIBinding{ID: inGameStation.ID})
+	if ok {
+		err := client.APIClient.DeleteBinding(APIBinding{ID: inGameStation.ID})
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -303,6 +336,8 @@ func (cli *CLI) execute(t string) {
 		cli.deleteCmd(split[1:])
 	case BindCmd:
 		cli.bindCmd(split[1:])
+	case BindAllCmd:
+		cli.bindAllCmd(split[1:])
 	case UnbindCmd:
 		cli.unbindCmd(split[1:])
 	case BindsCmd:

@@ -20,7 +20,7 @@ type FNRadioClient struct {
 	Proxy       *goproxy.ProxyHttpServer
 	Certificate *tls.Certificate
 	APIClient   APIClient
-	Users       map[string]*APIUser
+	Users       map[string]APIUser
 	Party       Party
 	BoundUser   string
 	LogFile     io.Writer
@@ -105,7 +105,7 @@ func main() {
 		Proxy:       goproxy.NewProxyHttpServer(),
 		Certificate: setupSSL(),
 		APIClient:   APIClient{},
-		Users:       map[string]*APIUser{},
+		Users:       map[string]APIUser{},
 		LogFile:     ioutil.Discard,
 	}
 

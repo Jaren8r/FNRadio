@@ -31,8 +31,8 @@ type APIBinding struct {
 }
 
 type APIUser struct {
-	Stations map[string]*APIStation `json:"stations"`
-	Bindings map[string]*APIBinding `json:"bindings"`
+	Stations map[string]APIStation `json:"stations"`
+	Bindings map[string]APIBinding `json:"bindings"`
 }
 
 type ErrorResponse struct {
@@ -89,7 +89,7 @@ func (c *APIClient) Setup() {
 	}
 }
 
-func (c *APIClient) GetUser(id string) (*APIUser, error) {
+func (c *APIClient) GetUser(id string) (APIUser, error) {
 	request, err := http.NewRequest(http.MethodGet, APIRoot+"/users/"+id, nil)
 	if err != nil {
 		panic(err)
@@ -99,7 +99,7 @@ func (c *APIClient) GetUser(id string) (*APIUser, error) {
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return nil, err
+		return APIUser{}, err
 	}
 
 	defer response.Body.Close()
@@ -109,23 +109,23 @@ func (c *APIClient) GetUser(id string) (*APIUser, error) {
 
 		err = json.NewDecoder(response.Body).Decode(&errorResponse)
 		if err != nil {
-			return nil, err
+			return APIUser{}, err
 		}
 
-		return nil, errors.New(errorResponse.Error)
+		return APIUser{}, errors.New(errorResponse.Error)
 	}
 
 	user := APIUser{}
 
 	err = json.NewDecoder(response.Body).Decode(&user)
 	if err != nil {
-		return nil, err
+		return APIUser{}, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
-func (c *APIClient) CreateStation(station *APIStation) error {
+func (c *APIClient) CreateStation(station APIStation) error {
 	data, err := json.Marshal(station)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (c *APIClient) CreateStation(station *APIStation) error {
 	return nil
 }
 
-func (c *APIClient) DeleteStation(station *APIStation) error {
+func (c *APIClient) DeleteStation(station APIStation) error {
 	request, err := http.NewRequest(http.MethodDelete, APIRoot+"/users/@me/stations/"+url.PathEscape(station.ID), nil)
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (c *APIClient) DeleteStation(station *APIStation) error {
 	return nil
 }
 
-func (c *APIClient) AddToQueue(station *APIStation, source string) error {
+func (c *APIClient) AddToQueue(station APIStation, source string) error {
 	data, err := json.Marshal(map[string]string{"source": source})
 	if err != nil {
 		return err
@@ -225,7 +225,7 @@ func (c *APIClient) AddToQueue(station *APIStation, source string) error {
 	return nil
 }
 
-func (c *APIClient) CreateBinding(binding *APIBinding) error {
+func (c *APIClient) CreateBinding(binding APIBinding) error {
 	data, err := json.Marshal(binding)
 	if err != nil {
 		return err
@@ -260,7 +260,7 @@ func (c *APIClient) CreateBinding(binding *APIBinding) error {
 	return nil
 }
 
-func (c *APIClient) DeleteBinding(binding *APIBinding) error {
+func (c *APIClient) DeleteBinding(binding APIBinding) error {
 	request, err := http.NewRequest(http.MethodDelete, APIRoot+"/users/@me/bindings/"+url.PathEscape(binding.ID), nil)
 	if err != nil {
 		return err
