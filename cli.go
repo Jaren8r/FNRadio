@@ -201,7 +201,6 @@ func (cli *CLI) deleteCmd(args []string) {
 	station, ok := client.Users[client.APIClient.ID].Stations[args[0]]
 	if !ok {
 		fmt.Println("Station not found")
-
 		return
 	}
 

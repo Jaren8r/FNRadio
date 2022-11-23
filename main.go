@@ -52,7 +52,7 @@ func (client *FNRadioClient) handleAkamaizedConnect(host string, _ *goproxy.Prox
 }
 
 func (client *FNRadioClient) handleAkamaizedRequest(r *http.Request, _ *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-	regex := regexp.MustCompile(`^/([^/,\s]+)/master\.blurl$`)
+	regex := regexp.MustCompile(`^/([^/,\s]+)/(main|master)\.blurl$`)
 
 	matchString := regex.FindStringSubmatch(r.URL.Path)
 
